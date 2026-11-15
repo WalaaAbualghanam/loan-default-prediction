@@ -4,7 +4,7 @@
 
 An end-to-end machine learning project that predicts which loan applicants will have payment difficulties and turns the predictions into an **approve / review / decline** decision, with calibrated probabilities, a cost-based cutoff, SHAP explanations and a fairness audit.
 
-**[Live Dashboard](https://walaaabualghanam.github.io/loan-default-prediction/)** · **[Presentation (PPTX)](Loan%20Default%20Prediction.pptx)** · **[Notebook](Walaa_AbuAlghanam_Loan_Default_Model.ipynb)**
+**[Presentation (PPTX)](Loan%20Default%20Prediction.pptx)** · **[Notebook](Walaa_AbuAlghanam_Loan_Default_Model.ipynb)**
 
 ---
 
@@ -68,7 +68,6 @@ An end-to-end machine learning project that predicts which loan applicants will 
 ```
 loan-default-prediction/
 ├── README.md
-├── index.html                                   # interactive dashboard (GitHub Pages)
 ├── Walaa_AbuAlghanam_Loan_Default_Model.ipynb   # full notebook
 └── Loan Default Prediction.pptx                 # 16-slide presentation
 ```
