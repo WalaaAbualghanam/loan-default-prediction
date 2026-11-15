@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loan Default Risk Dashboard</title>
+<style>
+:root{--bg:#f5f7f6;--ink:#14262b;--mut:#5d6f73;--card:#fff;--line:#d9e1e0;--ok:#1f7a74;--bad:#c8433f;--warn:#d89b2b;--bar:#2d5f6b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b1e;--ink:#e6efee;--mut:#9fb2b4;--card:#162629;--line:#27393d;--ok:#46b5ac;--bad:#ef6f6a;--warn:#e8b552;--bar:#6fb0bf}}
+:root[data-theme="dark"]{--bg:#0f1b1e;--ink:#e6efee;--mut:#9fb2b4;--card:#162629;--line:#27393d;--ok:#46b5ac;--bad:#ef6f6a;--warn:#e8b552;--bar:#6fb0bf}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:inherit}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 40px}
+h1{font:600 30px/1.15 Georgia,"Iowan Old Style",serif;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 18px}
+nav{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:20px}
+nav button{background:none;border:0;color:var(--mut);font:inherit;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--bad);font-weight:600}
+nav button:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+section{display:none}section.on{display:block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px}
+.k b{display:block;font:600 28px Georgia,serif}.k span{color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px}
+h2{font:600 17px Georgia,serif;margin:0 0 4px}.c p.n{color:var(--mut);font-size:13px;margin:0 0 12px}
+.row{display:grid;grid-template-columns:150px 1fr 52px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.tr{background:var(--line);height:14px;border-radius:2px;overflow:hidden}.tr i{display:block;height:100%;background:var(--bar)}
+.row.hi .tr i{background:var(--bad)}.row.lo .tr i{background:var(--ok)}
+.row em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}tr.best td{font-weight:600;color:var(--ok)}
+.scroll{overflow-x:auto}
+.rec{border-left:4px solid var(--ok);padding:2px 0 2px 12px;margin:12px 0}.rec b{display:block}
+.band{display:grid;grid-template-columns:90px 70px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.note{color:var(--mut);font-size:12.5px;margin-top:14px}
+#dec{display:flex;align-items:flex-end;gap:5px;height:150px;margin-top:6px}
+#dec div{flex:1;background:var(--bar);position:relative;min-height:2px}#dec div:nth-child(-n+2){background:var(--bad)}
+#dec span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px}
+#dl{display:flex;gap:5px;font-size:11px;color:var(--mut)}#dl span{flex:1;text-align:center}
+</style></head><body><div class="wrap">
+<h1>Loan Default Risk Dashboard</h1>
+<p class="sub">Home Credit application data: 307,507 loans after cleaning. Test-set results from the notebook; business values use assumed LGD 45% and margin 10%.</p>
+<nav role="tablist" id="tabs"></nav>
+
+<section id="overview" class="on">
+<div class="kpis">
+<div class="k"><b>8.1%</b><span>of loans show early payment difficulty</span></div>
+<div class="k"><b>0.771</b><span>test ROC-AUC of the final model (baseline 0.749)</span></div>
+<div class="k"><b>54%</b><span>of all defaulters sit in the riskiest 20% of clients</span></div>
+<div class="k"><b>14.7%</b><span>of portfolio expected loss saved (assumed LGD and margin)</span></div>
+</div>
+<div class="c"><h2>What the analysis says</h2>
+<p>Default is rare and uneven: external credit scores, occupation, education and age separate good from risky clients far better than loan size or income. A tuned LightGBM model with six financial ratios beats a logistic baseline by +0.022 AUC, and the gain is statistically clear. Its scores are calibrated to real probabilities, so they can drive a cost-based approve / review / decline policy.</p></div>
+</section>
+
+<section id="eda"><div class="grid">
+<div class="c"><h2>Default rate by group</h2><p class="n">Overall rate 8.1%. Groups under 1,000 clients ignored.</p><div id="g1"></div></div>
+<div class="c"><h2>Numeric signals</h2><p class="n">Default rate, lowest vs highest group.</p><div id="g2"></div></div>
+<div class="c"><h2>Data quality</h2>
+<table><tr><td>Columns with missing values</td><td class="r">67 (17 over 60%)</td></tr>
+<tr><td>Placeholder 365,243 days in DAYS_EMPLOYED</td><td class="r">55,374 rows</td></tr>
+<tr><td>Duplicate building columns dropped</td><td class="r">28</td></tr>
+<tr><td>Outliers flagged, not removed</td><td class="r">4,635 (1.51%)</td></tr>
+<tr><td>Final shape</td><td class="r">307,507 × 95</td></tr></table></div>
+<div class="c"><h2>Top drivers (mean |SHAP|)</h2><p class="n">Higher external scores lower the risk.</p><div id="g3"></div></div>
+</div></section>
+
+<section id="model"><div class="grid">
+<div class="c" style="grid-column:1/-1"><h2>Model comparison (test set)</h2><p class="n">Selected on validation ROC-AUC; test numbers are final.</p>
+<div class="scroll"><table><tr><th>Model</th><th>Features</th><th class="r">ROC-AUC</th><th class="r">PR-AUC</th><th class="r">KS</th></tr>
+<tr><td>Logistic Regression (baseline)</td><td>Base</td><td class="r">0.749</td><td class="r">0.231</td><td class="r">0.369</td></tr>
+<tr><td>Logistic Regression</td><td>+Financial</td><td class="r">0.750</td><td class="r">0.233</td><td class="r">0.370</td></tr>
+<tr><td>LightGBM</td><td>+Financial</td><td class="r">0.768</td><td class="r">0.258</td><td class="r">0.398</td></tr>
+<tr><td>XGBoost</td><td>+Financial</td><td class="r">0.768</td><td class="r">0.259</td><td class="r">0.402</td></tr>
+<tr class="best"><td>LightGBM tuned (final)</td><td>+Financial</td><td class="r">0.771</td><td class="r">0.262</td><td class="r">0.407</td></tr></table></div></div>
+<div class="c"><h2>Fit check</h2><table><tr><td>Train / validation / test AUC</td><td class="r">0.818 / 0.768 / 0.771</td></tr>
+<tr><td>5-fold CV AUC</td><td class="r">0.766 ± 0.003</td></tr>
+<tr><td>95% CI of test AUC</td><td class="r">0.764 to 0.778</td></tr>
+<tr><td>Gain over baseline</td><td class="r">+0.022 (CI +0.019 to +0.025)</td></tr>
+<tr><td>Tuning gain</td><td class="r">+0.0037 (small)</td></tr></table></div>
+<div class="c"><h2>Calibration</h2><table><tr><td>Brier score raw → calibrated</td><td class="r">0.184 → 0.067</td></tr>
+<tr><td>Calibration error (ECE)</td><td class="r">0.312 → 0.006</td></tr>
+<tr><td>Predicted vs actual default rate</td><td class="r">8.0% vs 8.07%</td></tr></table></div>
+</div></section>
+
+<section id="biz"><div class="grid">
+<div class="c"><h2>Default rate by risk decile</h2><p class="n">Decile 1 = riskiest 10%. Red = very high band.</p><div id="dec"></div><div id="dl"></div></div>
+<div class="c"><h2>Risk bands and actions</h2>
+<div class="band"><b>Very high</b><span>21.6%</span><span>Decline, or approve with collateral or guarantor</span></div>
+<div class="band"><b>High</b><span>9.5%</span><span>Manual underwriting; lower limit or risk-based pricing</span></div>
+<div class="band"><b>Medium</b><span>4.3%</span><span>Standard process</span></div>
+<div class="band"><b>Low</b><span>1.9%</span><span>Fast-track or pre-approved offers</span></div></div>
+<div class="c"><h2>Policy value</h2><p class="n">Net value as % of portfolio expected loss (test set).</p><div id="g4"></div></div>
+<div class="c"><h2>Recommendations</h2>
+<div class="rec"><b>Use the model to rank, then act by band</b>Reject when calibrated risk is above 18.2%: it rejects 9.2% of applicants and catches 33.8% of defaulters.</div>
+<div class="rec"><b>Make external scores a first checkpoint</b>They are the strongest drivers; send low scorers to manual review.</div>
+<div class="rec"><b>Add the missing data</b>Bureau, previous-application and instalment tables should lift performance; the learning curve is still rising.</div>
+<div class="rec"><b>Replace the assumptions</b>Re-run with the bank's own LGD and margin before quoting any money value.</div>
+<div class="rec"><b>Keep gender out and monitor</b>Approval-rate ratio is 0.94 (rule: 0.80+); proxies remain, so review them and re-calibrate regularly.</div></div>
+</div></section>
+<p class="note">Limits: one table only; target definition (X days, Y instalments) undisclosed; no dates, so no out-of-time validation; LGD and margin are assumptions.</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function bars(id,rows,max){$(id).innerHTML=rows.map(r=>`<div class="row ${r[2]||''}"><span>${r[0]}</span><div class="tr"><i style="width:${r[1]/max*100}%"></i></div><em>${r[3]||r[1]+'%'}</em></div>`).join('')}
+bars('g1',[['Low-skill laborers',17.2,'hi'],['Accountants',4.8,'lo'],['Lower secondary edu.',10.9,'hi'],['Higher education',5.4,'lo'],['Cash loans',8.3],['Revolving loans',5.5,'lo']],20);
+bars('g2',[['Lowest EXT_SOURCE_2 decile',18.4,'hi'],['Highest EXT_SOURCE_2 decile',3.0,'lo'],['Age under 30',11.5,'hi'],['Age over 60',4.9,'lo']],20);
+bars('g3',[['EXT_SOURCE_3',.341,'',.341],['EXT_SOURCE_2',.322,'',.322],['CREDIT_TERM',.173,'',.173],['EXT_SOURCE_1',.167,'',.167],['GOODS_CREDIT_RATIO',.134,'',.134]].map(r=>[r[0],r[1],'',r[1].toFixed(3)]),.36);
+bars('g4',[['Approve everyone',0,'','0%'],['Baseline LogReg',11.3,'','11.3%'],['Tuned LGBM, F1 threshold',13.8,'','13.8%'],['Tuned LGBM, t* = 0.182',14.7,'lo','14.7%']],16);
+const d=[28.5,14.7,10.7,8.2,5.8,4.2,2.9,2.8,1.9,1.0];
+$('dec').innerHTML=d.map(v=>`<div style="height:${v/30*100}%"><span>${v}</span></div>`).join('');
+$('dl').innerHTML=d.map((_,i)=>`<span>${i+1}</span>`).join('');
+const T=[['overview','Overview'],['eda','Data and EDA'],['model','Model'],['biz','Business insights']];
+$('tabs').innerHTML=T.map((t,i)=>`<button role="tab" data-t="${t[0]}" aria-selected="${i==0}">${t[1]}</button>`).join('');
+function show(id){T.forEach(t=>$(t[0]).classList.toggle('on',t[0]==id));document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t==id))}
+$('tabs').onclick=e=>{const t=e.target.dataset.t;if(t){show(t);try{history.replaceState(null,'','#'+t)}catch(_){}}};
+const h=location.hash.slice(1);if(T.some(t=>t[0]==h))show(h);
+addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(T.some(t=>t[0]==h))show(h)});
+</script></body></html>
